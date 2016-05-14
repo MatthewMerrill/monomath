@@ -1,0 +1,350 @@
+---
+layout: default
+
+sections:
+  - title: Registers
+    url: http://www.matthewmerrill.me/monomath/#registers
+  - title: Encoding
+    url: http://www.matthewmerrill.me/monomath/#encoding
+  - title: Instructions
+    url: http://www.matthewmerrill.me/monomath/#instructions
+  - title: Examples
+    url: http://www.matthewmerrill.me/monomath/#examples
+
+registers:
+  - name: "%AR"
+    description: "General 8 bit register."
+    opcode: 0
+  - name: "%BR"
+    description: "General 8 bit register."
+    opcode: 1
+  - name: "%CR"
+    description: "General 8 bit register."
+    opcode: 2
+  - name: "%DR"
+    description: "General 8 bit register."
+    opcode: 3
+  - name: "%MR"
+    description: "Math register. Used in calculations."
+    opcode: 4
+  - name: "%SR"
+    description: "Storage register. Cannot be directly accessed."
+    opcode: 5
+  - name: "%LO"
+    description: 'Will always resolve to 0 (fully "off" bits). Will not mutate if used as a source or sink.'
+    opcode: 6
+  - name: "%HI"
+    description: 'Will always resolve to 255 (fully "on" bits). Will not mutate if used as a source or sink.'
+    opcode: 7
+
+instructions:
+  - title: Manipulation
+    list:
+    - Interrupt:
+      title: Interrupt
+      description: Throws an interrupt for calling OS methods.
+      usage: INT arg0
+      example: INT $0x80
+      opcode: "0x0"
+      argcount: 1
+    - Jump Relative:
+      title: Jump Relative
+      description: Jumps the execution pointer relative to current location. If an argument is provided it will be used, otherwise the value will default to the current value in the math register. If this value is zero, the instruction will be ignored to help prevent an infinite loop.
+      usage: JMPR | JMPR arg0
+      example: JMPR %AR
+      opcode: "0x1"
+      argcount: 0-1
+    - Move:
+      title: Move
+      description: Moves a register/immediate/memory value into a register/memory. Memory values are indexed by byte, and move operations copy one byte. This provides you with access to 255 bytes of memory.
+      usage: MOV arg0 arg1
+      example: MOV %AR, %BR
+      opcode: "0x2"
+      argcount: 2
+    - Swap:
+      title: Swap
+      description: Swaps values of math and storage registers. 
+      usage: SWP
+      opcode: "0x3"
+      argcount: 0
+    - Save:
+      title: Save
+      description: Saves value from math register into storage. 
+      usage: SAV
+      opcode: "0x4"
+      argcount: 0
+  - title: Math
+    list: 
+    - Addition:
+      title: Addition
+      description: Adds arg0 to the math register.
+      usage: ADD arg0
+      example: ADD %AR
+      opcode: "0xA"
+      argcount: 1
+    - Invert:
+      title: Invert
+      description: Inverts the sign of the value stored in math register.
+      usage: INV
+      opcode: "0xB"
+      argcount: 1
+    - Multiplication:
+      title: Multiplication
+      description: Multiplies math register by arg0.
+      usage: MUL arg0
+      example: MUL %AR
+      opcode: "0xC"
+      argcount: 1
+    - Division:
+      title: Division
+      description: Divides math register by arg0. Remainder stored in storage register.
+      usage: DIV arg0
+      example: DIV %AR
+      opcode: "0xD"
+      argcount: 1
+    - Normalize:
+      title: Normalize
+      description: Converts the math register into a -1, 0, or 1 depending on its sign.
+      usage: NORM
+      opcode: "0xE"
+      argcount: 0
+
+---
+
+<div id="registers">
+    <h1>Registers</h1>
+    <table border="1">
+        <thead>
+            <td>Name:</td>
+            <td>Description:</td>
+            <td>Encoding:</td>
+        </thead>
+        <tbody>
+            {% for register in page.registers %}
+            <tr>
+                <td>{{register.name}}</td>
+                <td>{{register.description}}</td>
+                <td>{{register.opcode}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br><br>
+
+<div id="encoding">
+    <h1>Encoding</h1>
+    <p>Every encoding consists of:</p>
+    <ol>
+        <li>Opcode [4 bits]</li>
+        <li>Argument 0 type [2 bits]</li>
+        <li>Argument 1 type [2 bits]</li>
+    </ol>
+    
+    Argument Types:
+    <table border="1">
+        <thead>
+            <td>Encoding</td>
+            <td>Type</td>
+            <td>Value representation</td>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td>Does Not Exist</td>
+                <td>N/A</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Register</td>
+                <td>Left-padded register encoding (see <a href="http://www.matthewmerrill.me/monomath/#registers">#registers</a>)</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Immediate</td>
+                <td>Unsigned integer</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Memory</td>
+                <td>Unsigned integer</td>
+            </tr>
+        </tbody>
+    </table>
+    <br>
+    <p>If argument 0 exists, its value will be present in a second byte appended to the encoding. Same principle applies for argument 1.</p>
+    
+    <table border="1">
+        <thead>
+            <tr>
+                <td></td>
+                <td colspan="8">First Byte</td>
+                <td colspan="8">Second Byte</td>
+                <td colspan="8">Third Byte</td>
+            </tr>
+            <tr>
+                <td>Example:</td>
+                <td colspan="4">Opcode</td>
+                <td colspan="2">Arg0 Type</td>
+                <td colspan="2">Arg1 Type</td>
+                <td colspan="8">Arg0 Value</td>
+                <td colspan="8">Arg1 Value</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>No arguments</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td colspan="8"></td>
+                <td colspan="8"></td>
+            </tr>
+            <tr>
+                <td>One argument</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td colspan="8"></td>
+            </tr>
+            <tr>
+                <td>Two arguments</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td>1</td>
+                <td>0</td>
+                <td>0</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<br><br>
+
+<div id="instructions">
+    <h1>Instructions</h1>
+    {% for category in page.instructions %}
+    <h2 id="{{category.title}}"><a href="/#{{category.title}}">{{category.title}}</a></h2>
+    {% for instruction in category.list %}
+    
+    <div id="/#{{instruction.title}}" style="background-color:#edf3ef;padding:10px;">
+        <h2 style="margin-bottom: 0;"><em>{{instruction.title}}</em></h2>
+        <table border="1">
+            <thead>
+                <td>Opcode</td>
+                <td>Arg Count</td>
+            </thead>
+            <tbody>
+                <td>{{instruction.opcode}}</td>
+                <td>{{instruction.argcount}}</td>
+            </tbody>
+        </table>
+        <br>
+        <p>{{instruction.description}}</p>
+        
+        <h4 style="margin-bottom: 0;margin-top:5px;">Usage:</h4>
+        <pre><code>{{instruction.usage}}</code></pre>
+        {% if instruction.example %}
+        <h4 style="margin-bottom: 0;margin-top:5px;">Example:</h4>
+        <pre><code>{{instruction.example}}</code></pre>
+        {% endif %}
+    </div>
+    <br>
+    
+    {% endfor %}
+    {% endfor %}
+    
+</div>
+
+<br><br>
+
+<div id="examples">
+    <h1>Examples</h1>
+    <h2 id="kegger">Kegger</h2>
+    <p>Prints "Kegger" if %AR >= 21</p>
+    <pre><code>
+    MOV  %AR, %MR
+    MOV  $20, %AR
+    SUB  %AR
+    NORM
+    JMPR $8
+    MOV  $4, %AR
+    MOV  $1, %BR
+    MOV  $kegger, %CR
+    MOV  $6, %DR
+    INT  $0x80
+    JMPR 7
+    JMPR $-7
+    JMPR
+    MOV  $4, %AR
+    MOV  $1, %BR
+    MOV  $milk, %CR
+    MOV  $4, %DR
+    INT  $0x80
+    MOV  $1, %AR
+    INT  $0x80
+    </code></pre>
+    
+    Logic, while unintuitive, can be expanded into use by for-loops, do-whiles, etc.
+    
+</div>
+
+<!--
+<div class="home">
+
+  <h1 class="page-heading">Posts</h1>
+
+  <ul class="post-list">
+    {% for post in site.posts %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
+
+        <h2>
+          <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
+        </h2>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | prepend: site.baseurl }}">via RSS</a></p>
+
+</div>
+-->
